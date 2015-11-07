@@ -2,7 +2,7 @@
 
 ***
 
-****Usage****
+***Usage***
 
 Run the following commands
 - `git clone https://github.com/kylecrawshaw/ShareMounter.git`
@@ -12,7 +12,7 @@ Run the following commands
 
 
 
-****About****
+***About***
 
 The goal of ShareMounter is to automatically map and mount network file shares for users based on Active Directory group membership. ShareMounter is a menu bar app that users can customize to their liking.
 
@@ -27,7 +27,7 @@ You can optionally launch this application as a LaunchAgent so that it will be r
 
 Feedback and pull requests are welcome!
 
-****Requirements****
+***Requirements***
 - Computer must be bound to Active Directory (for now...)
 - System Admins should supply a list of network shares with titles and allowed AD groups
 	-	`/Library/Preferences/ShareMounter.plist`
@@ -39,7 +39,7 @@ Feedback and pull requests are welcome!
 	- `hide_from_menu`
 	- `connect_automatically`
 
-****Example plist****
+***Example plist***
 ```
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -76,7 +76,7 @@ Feedback and pull requests are welcome!
 </plist>
 ```
 
-****Credits****
+***Credits***
 
 ShareMounter was inspired by a number of projects from these fine individuals
 - Michael Lynn (aka pudquick, frogor, mikeymikey) -- mount_shares_better.py
@@ -84,6 +84,6 @@ ShareMounter was inspired by a number of projects from these fine individuals
 - Peter Bukowinski -- KerbMinder
 - Ben Toms (aka Macmule) -- Many blogposts and scripts
 
-****Problems?****
+***Problems?***
 
 Open and issue or better yet, submit a pull request with the fix. I want to make this as versatile of a tool as possible.

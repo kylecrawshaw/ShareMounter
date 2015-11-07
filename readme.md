@@ -86,4 +86,4 @@ ShareMounter was inspired by a number of projects from these fine individuals
 
 ***Problems?***
 
-Open and issue or better yet, submit a pull request with the fix. I want to make this as versatile of a tool as possible.
+Open an issue or better yet, submit a pull request with the fix. I want to make this as versatile of a tool as possible.

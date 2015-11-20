@@ -535,7 +535,7 @@
                         </textFieldCell>
                     </textField>
                     <textField verticalHuggingPriority="750" id="7db-MI-VRI">
-                        <rect key="frame" x="102" y="194" width="207" height="22"/>
+                        <rect key="frame" x="102" y="194" width="303" height="22"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <animations/>
                         <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" state="on" borderStyle="bezel" drawsBackground="YES" id="mgp-0B-KAC">
@@ -564,24 +564,6 @@
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                         </textFieldCell>
                     </textField>
-                    <button id="f5D-Jo-P76">
-                        <rect key="frame" x="100" y="79" width="159" height="18"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <animations/>
-                        <buttonCell key="cell" type="check" title="Connect Automatically" bezelStyle="regularSquare" imagePosition="left" inset="2" id="Bof-Z3-C76">
-                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                            <font key="font" metaFont="system"/>
-                        </buttonCell>
-                    </button>
-                    <button id="b3Q-fq-xxI">
-                        <rect key="frame" x="100" y="116" width="119" height="18"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <animations/>
-                        <buttonCell key="cell" type="check" title="Hide from Menu" bezelStyle="regularSquare" imagePosition="left" inset="2" id="slJ-eO-O1e">
-                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                            <font key="font" metaFont="system"/>
-                        </buttonCell>
-                    </button>
                     <popUpButton verticalHuggingPriority="750" id="tUu-rB-sn4">
                         <rect key="frame" x="124" y="271" width="188" height="26"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
@@ -602,17 +584,17 @@
                         </connections>
                     </popUpButton>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" id="eki-bB-sRp">
-                        <rect key="frame" x="18" y="278" width="101" height="17"/>
+                        <rect key="frame" x="16" y="276" width="104" height="17"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <animations/>
-                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Existing Shares:" id="rK5-fy-stO">
+                        <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" sendsActionOnEndEditing="YES" title="Network Shares:" id="rK5-fy-stO">
                             <font key="font" metaFont="system"/>
                             <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
                             <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
                         </textFieldCell>
                     </textField>
                     <button verticalHuggingPriority="750" id="bjE-XC-FbL">
-                        <rect key="frame" x="319" y="267" width="95" height="32"/>
+                        <rect key="frame" x="316" y="267" width="95" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <animations/>
                         <buttonCell key="cell" type="push" title="Add New" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="8Jk-mo-tqg">
@@ -624,7 +606,7 @@
                         </connections>
                     </button>
                     <button verticalHuggingPriority="750" id="nig-IL-tHe">
-                        <rect key="frame" x="322" y="187" width="89" height="32"/>
+                        <rect key="frame" x="96" y="67" width="89" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <animations/>
                         <buttonCell key="cell" type="push" title="Remove" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="iMq-QQ-IWX">
@@ -668,7 +650,7 @@
                         </textFieldCell>
                     </textField>
                     <button verticalHuggingPriority="750" id="GXe-dY-eeD">
-                        <rect key="frame" x="334" y="8" width="70" height="32"/>
+                        <rect key="frame" x="341" y="8" width="70" height="32"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                         <animations/>
                         <buttonCell key="cell" type="push" title="Save" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="INP-wF-6ch">
@@ -677,30 +659,6 @@
                         </buttonCell>
                         <connections>
                             <action selector="saveButtonClicked:" target="0eR-ry-vCe" id="coZ-il-0iq"/>
-                        </connections>
-                    </button>
-                    <button verticalHuggingPriority="750" id="XBC-qG-ezz">
-                        <rect key="frame" x="305" y="67" width="84" height="32"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <animations/>
-                        <buttonCell key="cell" type="push" title="Login" bezelStyle="rounded" alignment="center" borderStyle="border" transparent="YES" imageScaling="proportionallyDown" inset="2" id="2fM-6q-yXc">
-                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
-                            <font key="font" metaFont="system"/>
-                        </buttonCell>
-                        <connections>
-                            <action selector="openPasswordPanel:" target="0eR-ry-vCe" id="Mb7-f2-fOf"/>
-                        </connections>
-                    </button>
-                    <button id="wSG-Ob-51j">
-                        <rect key="frame" x="309" y="116" width="86" height="18"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <animations/>
-                        <buttonCell key="cell" type="check" title="Use SSO" bezelStyle="regularSquare" imagePosition="left" state="on" transparent="YES" inset="2" id="pAg-gW-eNp">
-                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                            <font key="font" metaFont="system"/>
-                        </buttonCell>
-                        <connections>
-                            <action selector="useSSOToggled:" target="0eR-ry-vCe" id="fF7-p6-ZIx"/>
                         </connections>
                     </button>
                     <button verticalHuggingPriority="750" id="2f3-c7-X5C">
@@ -718,6 +676,42 @@ Gw
                             <action selector="cancelButtonClicked:" target="0eR-ry-vCe" id="rak-3R-a0c"/>
                         </connections>
                     </button>
+                    <button id="wSG-Ob-51j" userLabel="UseKeberos Checkbox">
+                        <rect key="frame" x="285" y="147" width="104" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <animations/>
+                        <buttonCell key="cell" type="check" title="Use Kerberos" bezelStyle="regularSquare" imagePosition="left" state="on" transparent="YES" inset="2" id="pAg-gW-eNp">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                    </button>
+                    <button verticalHuggingPriority="750" id="bKe-Lp-kU7">
+                        <rect key="frame" x="293" y="67" width="118" height="32"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <animations/>
+                        <buttonCell key="cell" type="push" title="Mount Share" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Zgh-Qb-Z9Q">
+                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                    </button>
+                    <button id="f5D-Jo-P76">
+                        <rect key="frame" x="248" y="120" width="159" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <animations/>
+                        <buttonCell key="cell" type="check" title="Connect Automatically" bezelStyle="regularSquare" imagePosition="left" inset="2" id="Bof-Z3-C76">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                    </button>
+                    <button id="b3Q-fq-xxI">
+                        <rect key="frame" x="100" y="120" width="119" height="18"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                        <animations/>
+                        <buttonCell key="cell" type="check" title="Hide from Menu" bezelStyle="regularSquare" imagePosition="left" inset="2" id="slJ-eO-O1e">
+                            <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                            <font key="font" metaFont="system"/>
+                        </buttonCell>
+                    </button>
                 </subviews>
                 <animations/>
             </view>
@@ -734,7 +728,6 @@ Gw
                 <outlet property="addShareWindow" destination="371" id="33A-QD-4Vx"/>
                 <outlet property="connectAutoCheck" destination="f5D-Jo-P76" id="cgo-ep-5yc"/>
                 <outlet property="hideFromMenuCheck" destination="b3Q-fq-xxI" id="na9-oe-LYm"/>
-                <outlet property="loginButton" destination="XBC-qG-ezz" id="qQG-E3-VDS"/>
                 <outlet property="manageSharesView" destination="372" id="JSH-6K-PMs"/>
                 <outlet property="networkSharesDropdown" destination="tUu-rB-sn4" id="EGd-ao-cTV"/>
                 <outlet property="passwordFieldLogin" destination="rXT-IV-QLF" id="fYd-mb-1td"/>
@@ -744,7 +737,6 @@ Gw
                 <outlet property="serverNameLabel" destination="lD3-DF-cy4" id="dI3-hc-LYd"/>
                 <outlet property="shareTitleField" destination="7db-MI-VRI" id="xAq-Rx-XvB"/>
                 <outlet property="shareURLField" destination="WlQ-MF-hvw" id="AN6-r1-dTT"/>
-                <outlet property="useSSOCheckbox" destination="wSG-Ob-51j" id="ykM-7H-xxq"/>
                 <outlet property="usernameFieldLogin" destination="aXd-Eo-0eE" id="WVQ-1T-5GC"/>
             </connections>
         </customObject>
@@ -758,7 +750,7 @@ Gw
                 <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
             </textFieldCell>
         </textField>
-        <window title="Window" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" restorable="NO" hidesOnDeactivate="YES" oneShot="NO" showsToolbarButton="NO" visibleAtLaunch="NO" frameAutosaveName="" animationBehavior="default" id="CQ8-TH-Aqm" customClass="NSPanel">
+        <window title=" " allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" restorable="NO" hidesOnDeactivate="YES" oneShot="NO" showsToolbarButton="NO" visibleAtLaunch="NO" frameAutosaveName="" animationBehavior="default" id="CQ8-TH-Aqm" customClass="NSPanel">
             <windowStyleMask key="styleMask" titled="YES" utility="YES"/>
             <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
             <rect key="contentRect" x="704" y="607" width="391" height="176"/>
@@ -821,9 +813,6 @@ Gw
 DQ
 </string>
                         </buttonCell>
-                        <connections>
-                            <action selector="savePassword:" target="0eR-ry-vCe" id="zwK-Wo-d2t"/>
-                        </connections>
                     </button>
                     <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" id="lOs-RP-dME">
                         <rect key="frame" x="34" y="146" width="347" height="17"/>
@@ -856,9 +845,6 @@ DQ
 Gw
 </string>
                         </buttonCell>
-                        <connections>
-                            <action selector="closePasswordPanel:" target="0eR-ry-vCe" id="Rpk-oq-PcN"/>
-                        </connections>
                     </button>
                 </subviews>
                 <animations/>

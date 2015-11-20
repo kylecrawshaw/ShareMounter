@@ -18,6 +18,7 @@
 		BF28736D1BB83C960002D3C4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BF28736C1BB83C960002D3C4 /* Assets.xcassets */; };
 		BF2873751BB83D080002D3C4 /* StatusBarController.py in Resources */ = {isa = PBXBuildFile; fileRef = BF2873741BB83D080002D3C4 /* StatusBarController.py */; };
 		BF44B40E1BE5DFFB005097F4 /* SMUtilities.py in Resources */ = {isa = PBXBuildFile; fileRef = BF44B40D1BE5DFFB005097F4 /* SMUtilities.py */; };
+		BF589B271BEFD0D200CAB6F2 /* pymacad in Resources */ = {isa = PBXBuildFile; fileRef = BF589B261BEFD0D200CAB6F2 /* pymacad */; };
 		BF7D5B931BEDB5E6002990CC /* PyDialog.py in Resources */ = {isa = PBXBuildFile; fileRef = BF7D5B921BEDB5E6002990CC /* PyDialog.py */; };
 		BFBE20DC1BB8E39700A4A2B2 /* mount_shares_better.py in Resources */ = {isa = PBXBuildFile; fileRef = BFBE20DA1BB8E39700A4A2B2 /* mount_shares_better.py */; };
 /* End PBXBuildFile section */
@@ -39,6 +40,7 @@
 		BF28736E1BB83C960002D3C4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BF2873741BB83D080002D3C4 /* StatusBarController.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = StatusBarController.py; sourceTree = "<group>"; };
 		BF44B40D1BE5DFFB005097F4 /* SMUtilities.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = SMUtilities.py; sourceTree = "<group>"; };
+		BF589B261BEFD0D200CAB6F2 /* pymacad */ = {isa = PBXFileReference; lastKnownFileType = folder; path = pymacad; sourceTree = "<group>"; };
 		BF7D5B921BEDB5E6002990CC /* PyDialog.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = PyDialog.py; sourceTree = "<group>"; };
 		BFBE20DA1BB8E39700A4A2B2 /* mount_shares_better.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = mount_shares_better.py; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -95,6 +97,7 @@
 		BF28735B1BB83C960002D3C4 /* ShareMounter */ = {
 			isa = PBXGroup;
 			children = (
+				BF589B261BEFD0D200CAB6F2 /* pymacad */,
 				BF7D5B921BEDB5E6002990CC /* PyDialog.py */,
 				BF44B40D1BE5DFFB005097F4 /* SMUtilities.py */,
 				BFBE20DA1BB8E39700A4A2B2 /* mount_shares_better.py */,
@@ -192,6 +195,7 @@
 				BFBE20DC1BB8E39700A4A2B2 /* mount_shares_better.py in Resources */,
 				BF44B40E1BE5DFFB005097F4 /* SMUtilities.py in Resources */,
 				BF28736B1BB83C960002D3C4 /* MainMenu.xib in Resources */,
+				BF589B271BEFD0D200CAB6F2 /* pymacad in Resources */,
 				BF2568C21BB8D1730098896E /* FoundationPlist.py in Resources */,
 				BF2873751BB83D080002D3C4 /* StatusBarController.py in Resources */,
 				BF28736D1BB83C960002D3C4 /* Assets.xcassets in Resources */,

@@ -24,7 +24,6 @@ objc.loadBundleFunctions(NetFS_bundle, NetFS, [('NetFSMountURLSync', 'i@@@@@@o^@
 def mount_share(share_path, show_ui=False):
     # Mounts a share at /Volumes, returns the mount point or raises an error
     sh_url = CoreFoundation.CFURLCreateWithString(None, share_path, None)
-    print sh_url
     if not show_ui:
         # Set UI to reduced interaction
         open_options  = {NetFS.kNAUIOptionKey: NetFS.kNAUIOptionNoUI}
@@ -54,7 +53,6 @@ def mount_share_at_path(share_path, mount_path):
                     }
     # Mount!
     result, output = NetFS.NetFSMountURLSync(sh_url, mo_url, None, None, open_options, mount_options, None)
-    print output
     # Check if it worked
     if result != 0:
         raise Exception('Error mounting url "%s" at path "%s": %s' % (share_path, mount_path, output))

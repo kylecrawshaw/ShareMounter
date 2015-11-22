@@ -325,10 +325,16 @@ class StatusBarController(NSObject):
         # make application front and display window
         NSApplication.sharedApplication().activateIgnoringOtherApps_(objc.YES)
         self.addShareWindow.makeKeyAndOrderFront_(self)
-        network_share_titles = [share.get('title') for share in self.getAvailableShares()]
+        available_shares = self.getAvailableShares()
         self.networkSharesDropdown.removeAllItems()
-        self.networkSharesDropdown.addItemsWithTitles_(network_share_titles)
-        self.setupManageShareWindow()
+        # if available_shares:
+        #     network_share_titles = [share.get('title') for share in available_shares]
+        # else:
+        #     network_share_titles = list()
+        # print 'SETTING UP MANAGED SHARES WINDOW'
+        # self.networkSharesDropdown.removeAllItems()
+        # self.networkSharesDropdown.addItemsWithTitles_(network_share_titles)
+        self.setupManageShareWindow(refresh_shares=True)
 
 
     @objc.IBAction
@@ -423,39 +429,42 @@ class StatusBarController(NSObject):
 
 
     def setupManageShareWindow(self, refresh_shares=False):
-        network_share_titles = [share.get('title') for share in self.getAvailableShares()]
-        if self.shareTitleField.stringValue() not in network_share_titles:
-            refresh_shares=True
-        selected_share_title = self.networkSharesDropdown.titleOfSelectedItem()
+        available_shares = self.getAvailableShares()
+        if available_shares:
+            network_share_titles = [share.get('title') for share in available_shares]
 
-        if refresh_shares:
-            self.networkSharesDropdown.removeAllItems()
-            self.networkSharesDropdown.addItemsWithTitles_(network_share_titles)
-        selected_share = self.config_manager.get_sharebykey('title', selected_share_title)
-        self.shareURLField.setStringValue_(selected_share.get('share_url'))
-        self.shareTitleField.setStringValue_(selected_share.get('title'))
-        if selected_share.get('share_type') in ['managed', 'smb_home']:
-            self.shareTitleField.setEnabled_(False)
-            self.shareURLField.setEnabled_(False)
-            self.removeButton.setHidden_(True)
-            # self.loginButton.setHidden_(True)
-            # self.useSSOCheckbox.setEnabled_(False)
-            # self.useSSOCheckbox.setState_(True)
-            # self.loginButton.setHidden_(True)
-        else:
-            self.shareTitleField.setEnabled_(True)
-            self.shareURLField.setEnabled_(True)
-            self.removeButton.setHidden_(False)
-            # self.useSSOCheckbox.setEnabled_(True)
-            # if selected_share.get('use_kerberos') == 1:
-            #     self.useSSOCheckbox.setState_(True)
-            #     self.loginButton.setHidden_(True)
-            # else:
-            #     self.useSSOCheckbox.setState_(False)
-            #     self.loginButton.setHidden_(False)
+            if self.shareTitleField.stringValue() not in network_share_titles:
+                refresh_shares=True
+            selected_share_title = self.networkSharesDropdown.titleOfSelectedItem()
 
-        self.hideFromMenuCheck.setState_(selected_share.get('hide_from_menu'))
-        self.connectAutoCheck.setState_(selected_share.get('connect_automatically'))
+            if refresh_shares:
+                self.networkSharesDropdown.removeAllItems()
+                self.networkSharesDropdown.addItemsWithTitles_(network_share_titles)
+            selected_share = self.config_manager.get_sharebykey('title', selected_share_title)
+            self.shareURLField.setStringValue_(selected_share.get('share_url'))
+            self.shareTitleField.setStringValue_(selected_share.get('title'))
+            if selected_share.get('share_type') in ['managed', 'smb_home']:
+                self.shareTitleField.setEnabled_(False)
+                self.shareURLField.setEnabled_(False)
+                self.removeButton.setHidden_(True)
+                # self.loginButton.setHidden_(True)
+                # self.useSSOCheckbox.setEnabled_(False)
+                # self.useSSOCheckbox.setState_(True)
+                # self.loginButton.setHidden_(True)
+            else:
+                self.shareTitleField.setEnabled_(True)
+                self.shareURLField.setEnabled_(True)
+                self.removeButton.setHidden_(False)
+                # self.useSSOCheckbox.setEnabled_(True)
+                # if selected_share.get('use_kerberos') == 1:
+                #     self.useSSOCheckbox.setState_(True)
+                #     self.loginButton.setHidden_(True)
+                # else:
+                #     self.useSSOCheckbox.setState_(False)
+                #     self.loginButton.setHidden_(False)
+
+            self.hideFromMenuCheck.setState_(selected_share.get('hide_from_menu'))
+            self.connectAutoCheck.setState_(selected_share.get('connect_automatically'))
 
 
     @objc.IBAction

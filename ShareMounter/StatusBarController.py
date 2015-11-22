@@ -40,21 +40,13 @@ class StatusBarController(NSObject):
     # useSSOCheckbox = objc.IBOutlet()
     # loginButton = objc.IBOutlet()
 
-
     passwordPanel = objc.IBOutlet()
     passwordFieldLogin = objc.IBOutlet()
     passwordPanelView = objc.IBOutlet()
     usernameFieldLogin = objc.IBOutlet()
     serverNameLabel = objc.IBOutlet()
 
-    progressPanel = objc.IBOutlet()
-    progressPanelBar = objc.IBOutlet()
-    progressPanelLabel = objc.IBOutlet()
-
     menu_is_updating = False
-
-#    user = SMUtilities.DirectoryUser()
-    # kerberos = SMUtilities.Kerberos(user)
     config_manager = SMUtilities.ConfigManager()
 
 
@@ -65,21 +57,36 @@ class StatusBarController(NSObject):
         self.statusBar.button().setImage_(statusBarImage)
         self.buildMainMenu()
         self.updateConfig()
+        self.ldap_reachable = SMUtilities.is_ldap_reachable(SMUtilities.read_pref('domain'))
         self.registerForWorkspaceNotifications()
         self.detect_network_changes()
 
+
     def updateConfig(self):
         self.config_manager.validate_kerberos()
-        self.ldap_reachable = ad.accessible(self.config_manager.domain)
+        self.ldap_reachable = SMUtilities.is_ldap_reachable(SMUtilities.read_pref('domain'))
         if self.ldap_reachable:
-            self.config_manager.update_managedshares(self.config_manager.principal)
+            self.config_manager.update_managedshares()
         self.buildConnectMenu()
+        SMUtilities.notify('Connect menu has been updated!', '')
+
+
+    @objc.IBAction
+    def manualUpdate_(self, sender):
+        self.ldap_reachable = SMUtilities.is_ldap_reachable(SMUtilities.read_pref('domain'))
+        if self.ldap_reachable:
+            self.updateConfig()
+        else:
+            d = PyDialog.AlertDialog('Unable to update Connect menu!', 'Domain cannot be reached...')
+            d.display()
+
 
     @objc.IBAction
     def quit_(self, sender):
-        self.config_manager.save_prefs()
+        # self.config_manager.save_prefs()
         app = NSApplication.sharedApplication()
         app.terminate_(objc.nil)
+
 
     def buildMainMenu(self):
         self.mainMenu = NSMenu.alloc().init()
@@ -87,29 +94,43 @@ class StatusBarController(NSObject):
         self.mainMenu.addItem_(NSMenuItem.separatorItem())
         self.mainMenu.addItemWithTitle_action_keyEquivalent_('Manage Network Shares', self.manageNetworkShares_, '').setTarget_(self)
         self.mainMenu.addItemWithTitle_action_keyEquivalent_('Ticket Viewer', self.openTicketViewer_, '').setTarget_(self)
+        self.mainMenu.addItemWithTitle_action_keyEquivalent_('Refresh Kerberos', self.refreshKerberosTicket_, '').setTarget_(self)
         self.mainMenu.addItem_(NSMenuItem.separatorItem())
         self.mainMenu.addItemWithTitle_action_keyEquivalent_('Show Shares on Desktop', self.toggleShowDrivesOnDesktop_, '').setTarget_(self)
         if CoreFoundation.CFPreferencesCopyAppValue('ShowMountedServersOnDesktop', 'com.apple.finder'):
             self.mainMenu.itemWithTitle_('Show Shares on Desktop').setState_(True)
         self.mainMenu.addItemWithTitle_action_keyEquivalent_('Display Notifications', self.toggleNotifications_, '').setTarget_(self)
-        if self.config_manager.user_config.get('display_notifications'):
+        if SMUtilities.read_pref('display_notifications'):
             self.mainMenu.itemWithTitle_('Display Notifications').setState_(True)
         self.mainMenu.addItem_(NSMenuItem.separatorItem())
         self.mainMenu.addItemWithTitle_action_keyEquivalent_('Quit', self.quit_, '').setTarget_(self)
         self.statusBar.setMenu_(self.mainMenu)
+
 
     @objc.IBAction
     def openTicketViewer_(self, sender):
         app_path = '/System/Library/CoreServices/Ticket Viewer.app'
         NSWorkspace.sharedWorkspace().launchApplication_('Ticket Viewer')
 
+
+    @objc.IBAction
+    def refreshKerberosTicket_(self, sender):
+        self.ldap_reachable = SMUtilities.is_ldap_reachable(SMUtilities.read_pref('domain'))
+        if self.ldap_reachable:
+            self.config_manager.validate_kerberos()
+        else:
+            d = PyDialog.AlertDialog('Unable to refresh Kerberos Ticket!', 'Domain cannot be reached...')
+            d.display()
+
+
     def releaseStatusBar(self):
         self.mainMenu.release()
         NSStatusBar.systemStatusBar().removeStatusItem_(self.statusBar)
         self.statusBar.release()
 
+
     def buildShareMenu(self, share):
-        # NSLog('Building menu for "{0}"'.format(share.get('title')))
+        user_added_shares = SMUtilities.get_user_added_shares()
         shareMenu = NSMenu.alloc().init()
         connectMenuItem = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(share.get('title'), None, '')
         if share.get('mount_point') in SMUtilities.get_mounted_network_volumes():
@@ -134,12 +155,13 @@ class StatusBarController(NSObject):
         shareMenu.addItemWithTitle_action_keyEquivalent_('Hide from Menu',
                                                          self.toggleHideShare_,
                                                          '').setTarget_(self)
-        if share in self.config_manager.user_added_shares:
+        if share in user_added_shares:
             shareMenu.addItemWithTitle_action_keyEquivalent_('Remove from Menu',
                                                              self.removeUserShare_,
                                                              '').setTarget_(self)
         connectMenuItem.setSubmenu_(shareMenu)
         return connectMenuItem
+
 
     def updateShareMenu(self, share_path):
         mounted_volumes_base_paths = [os.path.basename(mounted) for mounted in SMUtilities.get_mounted_network_volumes()]
@@ -165,11 +187,13 @@ class StatusBarController(NSObject):
             unmount.setAction_(None)
             unmount.setTarget_(self)
 
+
     def processManagedShares(self):
-        if self.config_manager.managed_shares == []:
+        managed_shares = SMUtilities.get_managed_shares()
+        if managed_shares == []:
             self.connectMenu.addItemWithTitle_action_keyEquivalent_('No available shares...', None, '')
         else:
-            for share in self.config_manager.managed_shares:
+            for share in managed_shares:
                 share_menu = self.buildShareMenu(share)
                 self.connectMenu.addItem_(share_menu)
                 if share.get('hide_from_menu'):
@@ -186,17 +210,18 @@ class StatusBarController(NSObject):
 
 
     def processUserAddedShares(self):
+        user_added_shares = SMUtilities.get_user_added_shares()
         self.connectMenu.addItem_(NSMenuItem.separatorItem())
-        if self.config_manager.user_added_shares:
+        if user_added_shares:
             no_available_shares = self.connectMenu.indexOfItemWithTitle_('No available shares...')
             if no_available_shares != -1:
                 self.connectMenu.removeItemAtIndex_(no_available_shares)
-            for share in self.config_manager.user_added_shares:
+            for share in user_added_shares:
                 share_menu = self.buildShareMenu(share)
                 self.connectMenu.addItem_(share_menu)
                 if share.get('hide_from_menu'):
                     share_menu.setHidden_(True)
-
+        self.connectMenu.addItem_(NSMenuItem.separatorItem())
         if self.ldap_reachable:
             hide_all = False
             self.connectMenu.addItemWithTitle_action_keyEquivalent_('Show Hidden', self.toggleShowHidden_, '').setTarget_(self)
@@ -204,7 +229,7 @@ class StatusBarController(NSObject):
             self.toggleShowHiddenButton()
         else:
             hide_all = True
-
+        self.connectMenu.addItemWithTitle_action_keyEquivalent_('Check For Updates', self.manualUpdate_, '').setTarget_(self)
         for shareMenu in self.connectMenu.itemArray():
             if shareMenu.submenu() and hide_all:
                 shareMenu.setHidden_(True)
@@ -214,6 +239,7 @@ class StatusBarController(NSObject):
             self.connectMenu.addItemWithTitle_action_keyEquivalent_('Unmount All', self.unmountShare_, '').setTarget_(self)
         else:
             self.connectMenu.addItemWithTitle_action_keyEquivalent_('Unmount All', None, '')
+
 
     def buildConnectMenu(self):
         self.menu_is_updating = True
@@ -229,22 +255,24 @@ class StatusBarController(NSObject):
         self.menu_is_updating = False
         NSLog('Connect menu has been updated.')
 
+
     def autoMountShares(self):
+        managed_shares = SMUtilities.get_managed_shares()
+        user_added_shares = SMUtilities.get_user_added_shares()
         if self.ldap_reachable:
-            for share in self.config_manager.managed_shares:
+            for share in managed_shares:
                 if (share.get('connect_automatically')
                     and share.get('mount_point')
                     not in SMUtilities.get_mounted_network_volumes()):
 
                     NSLog('Automounting {0}'.format(share.get('share_url')))
-                    SMUtilities.mount_share(share.get('share_url'),
-                                            self.config_manager.user_config.get('display_notifications'))
-            for share in self.config_manager.user_added_shares:
+                    SMUtilities.mount_share(share.get('share_url'))
+            for share in user_added_shares:
                 if (share.get('connect_automatically')
                     and share.get('mount_point')
                     not in SMUtilities.get_mounted_network_volumes()):
-                    SMUtilities.mount_share(share.get('share_url'),
-                                            self.config_manager.user_config.get('display_notifications'))
+                    SMUtilities.mount_share(share.get('share_url'))
+
 
     def toggleShowHiddenButton(self):
         for connectMenuItem in self.connectMenu.itemArray():
@@ -263,24 +291,26 @@ class StatusBarController(NSObject):
     def connectToShare_(self, sender):
         NSLog('User clicked {}'.format(sender.parentItem().title()))
         network_share = self.config_manager.get_sharebykey('title', sender.parentItem().title())
-        SMUtilities.mount_share(network_share.get('share_url'),
-                                self.config_manager.user_config.get('display_notifications'))
+        SMUtilities.mount_share(network_share.get('share_url'))
+
 
     def getAvailableShares(self):
         available_shares = list()
-        print self.config_manager.managed_shares
-        for share in self.config_manager.managed_shares:
+        managed_shares = SMUtilities.get_managed_shares()
+        user_added_shares = SMUtilities.get_user_added_shares()
+        for share in managed_shares:
+            share = dict(share)
             share['share_type'] = 'managed'
             available_shares.append(share)
-        print 'HAS NOT FAILED'
-        for share in self.config_manager.user_added_shares:
+        for share in user_added_shares:
+            share = dict(share)
             share['share_type'] = 'user'
             available_shares.append(share)
         return available_shares
 
+
     @objc.IBAction
     def closePasswordPanel_(self, sender):
-        print 'Close panel clicked'
         self.passwordPanel.orderOut_(self)
 
 
@@ -312,6 +342,7 @@ class StatusBarController(NSObject):
     #     else:
     #         self.loginButton.setHidden_(False)
 
+
     @objc.IBAction
     def addNewShareClicked_(self, sender):
         self.shareTitleField.setStringValue_('New Share')
@@ -342,19 +373,20 @@ class StatusBarController(NSObject):
             self.networkSharesDropdown.insertItemWithTitle_atIndex_(share_title, index)
             self.networkSharesDropdown.selectItemAtIndex_(index)
 
-        existing_share = self.config_manager.get_sharebykey('title', selected_item.title())
-
-        if existing_share:
-            if existing_share.get('share_type') == 'managed':
-                existing_index = self.config_manager.managed_shares.index(existing_share)
-                self.config_manager.managed_shares[existing_index]['connect_automatically'] = auto_connect
-                self.config_manager.managed_shares[existing_index]['hide_from_menu'] = hide_from_menu
+        share = self.config_manager.get_sharebykey('title', selected_item.title())
+        if share:
+            if share.get('share_type') in ['managed', 'smb_home']:
+                existing_share, index = self.config_manager.get_managedshare_bykey('title', share.get('title'))
+                existing_share['connect_automatically'] = auto_connect
+                existing_share['hide_from_menu'] = hide_from_menu
+                self.config_manager.update_share(existing_share, index)
             else:
-                existing_index = self.config_manager.user_added_shares.index(existing_share)
-                self.config_manager.user_added_shares[existing_index]['connect_automatically'] = auto_connect
-                self.config_manager.user_added_shares[existing_index]['hide_from_menu'] = hide_from_menu
-                self.config_manager.user_added_shares[existing_index]['title'] = share_title
-                self.config_manager.user_added_shares[existing_index]['share_url'] = share_url
+                existing_share, index = self.config_manager.get_useradded_bykey('title', share.get('title'))
+                existing_share['connect_automatically'] = auto_connect
+                existing_share['hide_from_menu'] = hide_from_menu
+                existing_share['title'] = share_title
+                existing_share['share_url'] = share_url
+                self.config_manager.update_share(existing_share, index)
                 # self.config_manager.user_added_shares[existing_index]['use_kerberos'] = use_kerberos
             connect_menu_item = self.connectMenu.itemWithTitle_(selected_item.title())
             connect_menu_item.setTitle_(share_title)
@@ -368,7 +400,6 @@ class StatusBarController(NSObject):
                                                         hide_from_menu, auto_connect)
             self.buildConnectMenu()
         self.setupManageShareWindow()
-        self.config_manager.save_prefs()
 
 
     @objc.IBAction
@@ -379,17 +410,17 @@ class StatusBarController(NSObject):
             share, index = self.config_manager.get_useradded_bykey('title', self.shareTitleField.stringValue())
         menu_index = self.connectMenu.indexOfItemWithTitle_(share.get('title'))
         self.connectMenu.removeItemAtIndex_(menu_index)
-        self.config_manager.user_added_shares.remove(share)
+        self.config_manager.remove_share(share)
         first_item = self.networkSharesDropdown.itemArray()[0]
         self.networkSharesDropdown.selectItemWithTitle_(first_item.title())
         if self.addShareWindow.isVisible():
             self.setupManageShareWindow(refresh_shares=True)
-        self.config_manager.save_prefs()
 
 
     @objc.IBAction
     def cancelButtonClicked_(self, sender):
         self.addShareWindow.orderOut_(self)
+
 
     def setupManageShareWindow(self, refresh_shares=False):
         network_share_titles = [share.get('title') for share in self.getAvailableShares()]
@@ -403,7 +434,7 @@ class StatusBarController(NSObject):
         selected_share = self.config_manager.get_sharebykey('title', selected_share_title)
         self.shareURLField.setStringValue_(selected_share.get('share_url'))
         self.shareTitleField.setStringValue_(selected_share.get('title'))
-        if selected_share.get('share_type') == 'managed':
+        if selected_share.get('share_type') in ['managed', 'smb_home']:
             self.shareTitleField.setEnabled_(False)
             self.shareURLField.setEnabled_(False)
             self.removeButton.setHidden_(True)
@@ -430,42 +461,52 @@ class StatusBarController(NSObject):
     @objc.IBAction
     def toggleAutoConnect_(self, sender):
         share = self.config_manager.get_sharebykey('title', sender.parentItem().title())
-        if share:
-            if share.get('connect_automatically'):
+        if share.get('share_type') in ['managed', 'smb_home']:
+            existing_share, index = self.config_manager.get_managedshare_bykey('title', share.get('title'))
+        else:
+            existing_share, index = self.config_manager.get_useradded_bykey('title', share.get('title'))
+        if existing_share:
+            if existing_share.get('connect_automatically'):
                 sender.setState_(False)
-                share['connect_automatically'] = False
-                NSLog('User has set {0} to no longer connect automatically'.format(share.get('title')))
+                existing_share['connect_automatically'] = False
+                self.config_manager.update_share(existing_share, index)
+                NSLog('User has set {0} to no longer connect automatically'.format(existing_share.get('title')))
             else:
                 sender.setState_(True)
-                share['connect_automatically'] = True
-                if share.get('mount_point') not in SMUtilities.get_mounted_network_volumes():
-                    SMUtilities.mount_share(share.get('share_url'),
-                                            self.config_manager.user_config.get('display_notifications'))
-                NSLog('User has set {0} to connect automatically.'.format(share.get('title')))
+                existing_share['connect_automatically'] = True
+                if existing_share.get('mount_point') not in SMUtilities.get_mounted_network_volumes():
+                    SMUtilities.mount_share(existing_share.get('share_url'))
+                self.config_manager.update_share(existing_share, index)
+                NSLog('User has set {0} to connect automatically.'.format(existing_share.get('title')))
         if self.addShareWindow.isVisible():
             self.connectAutoCheck.setState_(share.get('connect_automatically'))
-        self.config_manager.save_prefs()
+
 
     @objc.IBAction
     def toggleHideShare_(self, sender):
         NSLog('User clicked "{0}"'.format(sender.title()))
         share = self.config_manager.get_sharebykey('title', sender.parentItem().title())
-        print share
-        if share:
-            if share.get('hide_from_menu'):
+        if share.get('share_type') in ['managed', 'smb_home']:
+            existing_share, index = self.config_manager.get_managedshare_bykey('title', share.get('title'))
+        else:
+            existing_share, index = self.config_manager.get_useradded_bykey('title', share.get('title'))
+        if existing_share:
+            if existing_share.get('hide_from_menu'):
                 sender.parentItem().setHidden_(False)
                 sender.setState_(False)
-                share['hide_from_menu'] = False
+                existing_share['hide_from_menu'] = False
+                self.config_manager.update_share(existing_share, index)
             else:
                 if not self.connectMenu.itemWithTitle_('Show Hidden').state():
                     sender.parentItem().setHidden_(True)
                 else:
                     sender.setState_(True)
-                share['hide_from_menu'] = True
+                existing_share['hide_from_menu'] = True
+                self.config_manager.update_share(existing_share, index)
         self.toggleShowHiddenButton()
         if self.addShareWindow.isVisible():
             self.hideFromMenuCheck.setState_(share.get('hide_from_menu'))
-        self.config_manager.save_prefs()
+
 
     @objc.IBAction
     def toggleShowHidden_(self, sender):
@@ -484,6 +525,7 @@ class StatusBarController(NSObject):
                     shareMenu.submenu().itemWithTitle_('Hide from Menu').setState_(True)
             sender.setState_(True)
 
+
     @objc.IBAction
     def toggleShowDrivesOnDesktop_(self, sender):
         finder = 'com.apple.finder'
@@ -497,13 +539,14 @@ class StatusBarController(NSObject):
             show_icons = True
             alert_title = 'Getting ready to show server icons on desktop.'
 
-        alert = SMUtilities.PyDialog.ContinueDialog(alert_title, message)
+        alert = PyDialog.ContinueDialog(alert_title, message)
         alert.display()
         if alert.should_continue():
             CoreFoundation.CFPreferencesSetAppValue('ShowMountedServersOnDesktop', show_icons, finder)
             sender.setState_(show_icons)
-            CoreFoundation.CFPreferencesAppSynchronize(finder)
-            subprocess.check_output(['/usr/bin/killall', '-HUP', 'Finder'])
+            if CoreFoundation.CFPreferencesAppSynchronize(finder):
+                subprocess.check_output(['/usr/bin/killall', '-HUP', 'Finder'])
+
 
     @objc.IBAction
     def toggleNotifications_(self, sender):
@@ -512,8 +555,8 @@ class StatusBarController(NSObject):
         else:
             show_notifications = True
         sender.setState_(show_notifications)
-        self.config_manager.user_config['display_notifications'] = show_notifications
-        self.config_manager.save_prefs()
+        SMUtilities.write_pref('display_notifications', show_notifications)
+
 
     @objc.IBAction
     def openFolderClicked_(self, sender):
@@ -528,24 +571,21 @@ class StatusBarController(NSObject):
         mounted_volumes = SMUtilities.get_mounted_network_volumes()
         if sender.title() == 'Unmount All':
             for mounted in mounted_volumes:
-                SMUtilities.unmount_share(mounted,
-                                         self.config_manager.user_config.get('display_notifications'))
+                SMUtilities.unmount_share(mounted)
         else:
             network_share = self.config_manager.get_sharebykey('title', sender.parentItem().title())
             if network_share.get('mount_point') in mounted_volumes:
-                SMUtilities.unmount_share(network_share.get('mount_point'),
-                                         self.config_manager.user_config.get('display_notifications'))
+                SMUtilities.unmount_share(network_share.get('mount_point'))
 
 
     def unmountAllShares(self):
         mounted_volumes = SMUtilities.get_mounted_network_volumes()
         for mounted in mounted_volumes:
-            SMUtilities.unmount_share(mounted,
-                                     self.config_manager.user_config.get('display_notifications'))
+            SMUtilities.unmount_share(mounted)
 
 
-    def userNotificationCenter_shouldPresentNotification_(self, center, notification):
-        return objc.YES
+    # def userNotificationCenter_shouldPresentNotification_(self, center, notification):
+    #     return objc.YES
 
 
     def registerForWorkspaceNotifications(self):
@@ -582,10 +622,11 @@ class StatusBarController(NSObject):
             else:
                 NSLog('Connect Menu is empty. No need to update')
 
+
     def networkStateHasChanged(self, store, keys, info):
         NSLog('Network state has changed')
-        self.ldap_reachable = SMUtilities.is_ldap_reachable(self.config_manager.domain)
-        print 'Menu is updating: {0}'.format(self.menu_is_updating)
+        self.ldap_reachable = SMUtilities.is_ldap_reachable(SMUtilities.read_pref('domain'))
+        NSLog('Menu is updating: {0}'.format(self.menu_is_updating))
         if self.menu_is_updating == False:
             self.menu_is_updating = True
             NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(3.5,

@@ -22,8 +22,8 @@ class AppDelegate(NSObject):
         nc = NSUserNotificationCenter.defaultUserNotificationCenter()
         nc.setDelegate_(self)
 
-#    def userNotificationCenter_shouldPresentNotification_(self, center, notification):
-#        return objc.YES
+    def userNotificationCenter_shouldPresentNotification_(self, center, notification):
+        return objc.YES
 
     def applicationWillTerminate_(self, notification):
        # be nice and remove our observers from NSWorkspace

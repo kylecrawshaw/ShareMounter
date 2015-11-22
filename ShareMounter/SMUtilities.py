@@ -18,7 +18,7 @@ from Cocoa import NSAppleScript
 homedir = os.path.expanduser('~')
 user_preferences_path = os.path.join(homedir, 'Library/Preferences/ShareMounter.plist')
 global_preferences_path = '/Library/Preferences/ShareMounter.plist'
-kCFPreferencesCurrentApplication = 'com.github.kylecrawshaw.sharemounter'
+kCFPreferencesCurrentApplication = 'ShareMounter'
 
 
 def is_ldap_reachable(domain):

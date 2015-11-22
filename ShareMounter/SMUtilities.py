@@ -32,9 +32,10 @@ class AppleScript(object):
 def is_ldap_reachable(domain):
     '''Checks whether or not the ldap server can be reached. Returns True.'''
     try:
-        cmd = ['dig', '-t', 'srv', '_ldap._tcp.{}'.format(domain), '+time=1', '+tries=3']
-        dig = subprocess.check_output(cmd)
-        if 'ANSWER SECTION' in dig:
+        # cmd = ['dig', '-t', 'srv', '_ldap._tcp.{}'.format(domain), '+time=1', '+tries=3']
+        # dig = subprocess.check_output(cmd)
+        # if 'ANSWER SECTION' in dig:
+        if ad.accessible(domain):
             NSLog('Ldap server is reachable by dig')
             return True
         else:
@@ -73,16 +74,14 @@ def get_mounted_network_volumes():
     return mount_paths
     #pylint: enable=C0103
 
-def mount_share(share_url, notifications=True):
-    thread = CustomThread(url=share_url,
-                          display_notifications=notifications)
+def mount_share(share_url):
+    thread = CustomThread(url=share_url)
     thread.daemon = True
     thread.start()
 
 
-def unmount_share(mount_path, notifications):
-    thread = CustomThread(unmount=mount_path,
-                          display_notifications=notifications)
+def unmount_share(mount_path):
+    thread = CustomThread(unmount=mount_path)
     thread.daemon = True
     thread.start()
 
@@ -103,50 +102,65 @@ def open_file(file_path):
 def notify(title, subject):
     '''Displays a notification if user has not disable ShareMounter in
        notification center'''
-    notification = NSUserNotification.alloc().init()
-    notification.setTitle_(title)
-    notification.setInformativeText_(subject)
-    notification.setSoundName_('NSUserNotificationDefaultSoundName')
-    NSUserNotificationCenter.defaultUserNotificationCenter().deliverNotification_(notification)
+    if read_pref('display_notifications'):
+        notification = NSUserNotification.alloc().init()
+        notification.setTitle_(title)
+        notification.setInformativeText_(subject)
+        notification.setSoundName_('NSUserNotificationDefaultSoundName')
+        NSUserNotificationCenter.defaultUserNotificationCenter().deliverNotification_(notification)
+
 
 def _get_console_user():
     return SCDynamicStoreCopyConsoleUser(None, None, None)[0]
 
 
+def write_pref(key, value):
+    # NSLog('Setting "{0}" to "{1}"'.format(key, value))
+    CFPreferencesSetAppValue(key, value, kCFPreferencesCurrentApplication)
+    if not CFPreferencesAppSynchronize(kCFPreferencesCurrentApplication):
+        d = PyDialog.AlertDialog('Something went wrong...',
+                                 'Unable to save preference: "{0}"'.format(key))
+        d.display()
+        NSLog('ERROR: unable to save user preferences!')
+
+def read_pref(pref_key):
+    return CFPreferencesCopyAppValue(pref_key, kCFPreferencesCurrentApplication)
+
+
+def get_managed_shares():
+    managed_shares = list(read_pref('managed_shares'))
+    return [dict(share) for share in managed_shares]
+
+def get_user_added_shares():
+    user_added_shares = list(read_pref('user_added_shares'))
+    return [dict(share) for share in user_added_shares]
+
+
 class ConfigManager(object):
 
     def __init__(self):
-        self.protocol_map = {
-            'http': 'http',
-            'https': 'htps',
-            'smb': 'smb ',
-            'afp': 'afp ',
-            'cifs': 'cifs'
-        }
-        self.global_config = dict()
-        self.managed_shares = list()
-        self.user_added_shares = list()
-        self.user_config = dict()
-        self.domain = str()
-        self.principal = str()
         self.load_prefs()
 
     def validate_kerberos(self):
+        NSLog('Checking and updating Kerberos if necessary...')
         def _update_login():
             try:
-                if not ad.bound() or not kerberos.check_keychain(self.principal):
+                if not ad.bound():
                     d = PyDialog.PasswordDialog()
-                    d.display()
-                    self.principal = ad._format_principal(d.username())
-                    self.domain = ad._split_principal(d.username())[1]
-                    if ad.accessible(self.domain):
-                        result = kerberos.test_kerberos_password(self.principal,
-                                                                 d.password())
-                        if result != True:
-                            _update_login()
+                    selection = d.display()
+                    if selection:
+                        principal = ad._format_principal(d.username())
+                        domain = ad._split_principal(d.username())[1]
+                        write_pref('principal', principal)
+                        write_pref('domain', domain)
+                        if is_ldap_reachable(read_pref('domain')):
+                            result = kerberos.test_kerberos_password(read_pref('principal'),
+                                                                     d.password())
+                            if result != True:
+                                _update_login()
                 else:
-                    if ad.accessible(self.domain):
-                        success = kerberos.test_kerberos_password(self.principal, _update_password())
+                    if is_ldap_reachable(read_pref('domain')):
+                        success = kerberos.test_kerberos_password(read_pref('principal'), _update_password())
                         if not success:
                             _update_login()
             except ad.PrincipalFormatError:
@@ -157,44 +171,54 @@ class ConfigManager(object):
                 self.validate_kerberos()
 
         def _update_password():
-            message = 'Enter the password for {0}'.format(self.principal)
+            message = 'Enter the password for {0}'.format(read_pref('principal'))
             d = PyDialog.SecureInputDialog('Could not find keychain entry!', message)
             d.display()
             return d.get_input()
 
-        if not self.domain or not self.principal:
+
+        if not read_pref('domain') or not read_pref('principal'):
             _update_login()
 
-        if not kerberos.check_keychain(self.principal):
-            _update_login()
 
-        kerberos.delete_expired_tickets()
-
-        if kerberos.tickets() == []:
-            NSLog('Could not find a valid Kerberos ticket. Requesting new ticket now...')
-            success = kerberos.kinit_keychain_command(self.principal)
-            result = ('New Kerberos ticket granted!' if success
-                      else 'Unable to get new Kerberos ticket')
+        if is_ldap_reachable(read_pref('domain')):
+            if not kerberos.check_keychain(read_pref('principal')):
+                _update_login()
             if kerberos.tickets() == []:
-                kerberos.refresh_ticket()
-            NSLog(result)
-        else:
-            NSLog('Kerberos ticket exists in cache. Attempting to renew ticket...')
-            success = kerberos.refresh_ticket()
-            result = ('Successfully renewed Kerberos ticket!' if success
-                      else 'Unable to renew Kerberos ticket!')
-            NSLog(result)
-        self.save_prefs()
+                NSLog('Could not find a valid Kerberos ticket. Requesting new ticket now...')
+                success = kerberos.kinit_keychain_command(read_pref('principal'))
+                result = ('New Kerberos ticket granted!' if success
+                          else 'Unable to get new Kerberos ticket')
+                notify(result, '')
+                NSLog(result)
+            else:
+                NSLog('Kerberos ticket exists in cache. Attempting to renew ticket...')
+                if not kerberos.refresh_ticket():
+                    success = kerberos.kinit_keychain_command(read_pref('principal'))
+                else:
+                    success = True
+                result = ('Successfully renewed Kerberos ticket!' if success
+                          else 'Unable to renew Kerberos ticket!')
+                notify(result, '')
+                NSLog(result)
+            kerberos.delete_expired_tickets()
 
 
     def _get_base_args(self, server_url, username):
+        protocol_map = {
+            'http': 'http',
+            'https': 'htps',
+            'smb': 'smb ',
+            'afp': 'afp ',
+            'cifs': 'cifs'
+        }
         parsed_url = urlparse.urlparse(server_url)
         args = [
             '-l', parsed_url.netloc,
             '-a', username,
             '-s', parsed_url.netloc,
             '-p', parsed_url.path,
-            '-r', self.protocol_map[parsed_url.scheme],
+            '-r', protocol_map[parsed_url.scheme],
         ]
         return args
 
@@ -233,35 +257,6 @@ class ConfigManager(object):
             return False
 
 
-    def save_prefs(self):
-        self.write_pref('managed_shares', self.managed_shares)
-        self.write_pref('user_added_shares', self.user_added_shares)
-        self.write_pref('principal', self.principal)
-        self.write_pref('domain', self.domain)
-        # self.write_pref('display_notifications')
-        # self.user_config['managed_shares'] = self.managed_shares
-        # self.user_config['user_added_shares'] = self.user_added_shares
-        # self.user_config['principal'] = self.principal
-        # self.user_config['domain'] = self.domain
-        # FoundationPlist.writePlist(self.user_config, user_preferences_path)
-
-
-    def load_global_prefs(self):
-        self.global_config = FoundationPlist.readPlist(global_preferences_path)
-        # self.managed_shares = self.read_managed_pref('network_shares')
-
-    def write_pref(self, key, value):
-        CFPreferencesSetAppValue(key, value, kCFPreferencesCurrentApplication)
-        if not CFPreferencesAppSynchronize(kCFPreferencesCurrentApplication):
-            d = PyDialog.AlertDialog('Something went wrong...',
-                                     'Unable to save preference: "{0}"'.format(key))
-            d.display()
-            NSLog('ERROR: unable to save user preferences!')
-
-    def read_managed_pref(self, pref_key):
-        return CFPreferencesCopyAppValue(pref_key, kCFPreferencesCurrentApplication)
-
-
     def load_prefs(self):
         NSLog('Loading user preferences...')
         defaults = {
@@ -269,45 +264,31 @@ class ConfigManager(object):
             'user_added_shares': list(),
             'display_notifications': True,
             'group_membership': list(),
+            'domain': '',
+            'principal': ''
         }
-        # if not os.path.exists(user_preferences_path):
-        #     self.user_config = defaults
-        # else:
-        #     self.user_config = FoundationPlist.readPlist(user_preferences_path)
-        #     for key, value in defaults.iteritems():
-        #         if key not in self.user_config.keys():
-        #             self.user_config[key] = value
-        if self.read_managed_pref('managed_shares'):
-            self.managed_shares = [dict(share) for share in self.read_managed_pref('managed_shares')]
-        else:
-            self.managed_shares = list()
-
-        if self.read_managed_pref('user_added_shares'):
-            self.user_added_shares = [dict(share) for share in self.read_managed_pref('user_added_shares')]
-        else:
-            self.user_added_shares = list()
-
+        for key, value in defaults.iteritems():
+            if not read_pref(key):
+                write_pref(key, value)
         if ad.bound():
-            self.domain = ad.domain_dns()
-            self.principal = ad.principal()
-        else:
-            self.domain = self.read_managed_pref('domain')
-            self.principal = self.read_managed_pref('principal')
-
-        self.save_prefs()
+            write_pref('domain', ad.domain_dns())
+            write_pref('principal', ad.principal())
 
 
     def get_sharebykey(self, key, value):
-        for network_share in self.managed_shares:
+        managed_shares = get_managed_shares()
+        user_added_shares = get_user_added_shares()
+        for network_share in managed_shares:
             if network_share[key] == value:
                 return network_share
-        for network_share in self.user_added_shares:
+        for network_share in user_added_shares:
             if network_share[key] == value:
                 return network_share
 
 
     def get_managedshare_bykey(self, key, value):
-        for index, network_share in enumerate(self.managed_shares):
+        managed_shares = get_managed_shares()
+        for index, network_share in enumerate(managed_shares):
             if network_share[key] == value:
                 return network_share, index
             else:
@@ -315,8 +296,22 @@ class ConfigManager(object):
         return None, None
 
 
+    def remove_share(self, network_share):
+        current_share = self.get_share_bykey('title', network_share.get('title'))
+        user_added_shares = get_user_added_shares()
+        managed_shares = get_managed_shares()
+        if current_share:
+            if current_share.get('share_type') == 'managed':
+                managed_shares.remove(current_share)
+                write_pref('managed_shares', managed_shares)
+            else:
+                user_added_shares.remove(user_share)
+                write_pref('user_added_shares', user_added_shares)
+
+
     def get_useradded_bykey(self, key, value):
-        for index, network_share in enumerate(self.user_added_shares):
+        user_added_shares = get_user_added_shares()
+        for index, network_share in enumerate(user_added_shares):
             if network_share[key] == value:
                 return network_share, index
         return None, None
@@ -337,8 +332,9 @@ class ConfigManager(object):
             processed_share['username'] = username
         return processed_share
 
+
     def get_mappedshares(self, membership):
-        server_url = self.read_managed_pref('server_url')
+        server_url = read_pref('server_url')
         if server_url:
             NSLog('Requesting network shares from {0}'.format(server_url))
             try:
@@ -350,15 +346,17 @@ class ConfigManager(object):
         else:
             NSLog('Attempting to load preferences from plist')
             mapped_shares = [network_share
-                             for network_share in self.read_managed_pref('network_shares')
+                             for network_share in read_pref('network_shares')
                              for group in membership
                              if group in network_share['groups']]
             NSLog('Loaded mapped shares!')
         return mapped_shares
 
-    def update_managedshares(self, principal):
+
+    def update_managedshares(self):
         NSLog('Updating managed shares...')
-        membership = ad.membership(self.principal)
+        membership = ad.membership(read_pref('principal'))
+        managed_shares = get_managed_shares()
         mapped_shares = self.get_mappedshares(membership)
         mapped_share_titles = [share['title'] for share in mapped_shares]
         for mapped_share in mapped_shares:
@@ -366,15 +364,16 @@ class ConfigManager(object):
             if existing_share:
                 NSLog('Updating existing share')
                 if existing_share['share_url'] != mapped_share['share_url']:
-                    self.managed_shares[index]['share_url'] = mapped_share['share_url']
+                    managed_shares[index]['share_url'] = mapped_share['share_url']
                 if existing_share['groups'] != mapped_share['groups']:
-                    self.managed_shares[index]['groups'] = mapped_share['groups']
+                    managed_shares[index]['groups'] = mapped_share['groups']
             else:
                 NSLog('Processing new network share: {0}'.format(mapped_share.get('title')))
                 processed_share = self._process_networkshare(mapped_share)
-                self.managed_shares.append(processed_share)
+                managed_shares.append(processed_share)
+            write_pref('managed_shares', managed_shares)
 
-        if self.read_managed_pref('include_smb_home'):
+        if read_pref('include_smb_home'):
             NSLog('Getting SMB Home info...')
             existing, index = self.get_managedshare_bykey('share_type', 'smb_home')
             if ad.bound():
@@ -383,33 +382,30 @@ class ConfigManager(object):
                 if existing:
                     NSLog('SMB Home already exists in config. Updating...')
                     if existing.get('title') != username:
-                        self.managed_shares[index]['share_title'] = username
+                        managed_shares[index]['share_title'] = username
                     if existing.get('share_url') != smbhome:
-                        self.managed_shares[index]['share_url'] = smbhome
+                        managed_shares[index]['share_url'] = smbhome
                 else:
                     network_share = {'title': username, 'share_url': smbhome}
                     processed = self._process_networkshare(network_share,
                                                           share_type='smb_home')
-                    self.managed_shares.append(processed)
+                    managed_shares.append(processed)
                 NSLog('Done checking for SMB Info...')
             else:
                 NSLog('Computer is not bound. Skipping SMB Home...')
+            write_pref('managed_shares', managed_shares)
 
-        current_shares = list(self.managed_shares)
+        current_shares = list(managed_shares)
         for network_share in current_shares:
             if (network_share.get('title') not in mapped_share_titles
                 and network_share.get('share_type') != 'smb_home'):
-                self.managed_shares.remove(network_share)
-
-        self.save_prefs()
+                remove_share(network_share)
         NSLog('Managed shares have been updated!')
 
 
     def _process_membership(self, group_membership):
-        print group_membership
-        print self.read_managed_pref('network_shares')
         mapped_shares = [network_share
-                         for network_share in self.read_managed_pref('network_shares')
+                         for network_share in read_pref('network_shares')
                          for group in group_membership
                          if group in network_share['groups']]
         return mapped_shares
@@ -422,25 +418,51 @@ class ConfigManager(object):
                                                     auto_connect=auto_connect,
                                                     share_type='user_added',
                                                     username=username)
+        user_added_shares = get_user_added_shares()
         if existing_share:
-            self.user_added_shares[index] = processed_share
+            user_added_shares[index] = processed_share
         else:
-            self.user_added_shares.append(processed_share)
-        self.save_prefs()
+            user_added_shares.append(processed_share)
+        write_pref('user_added_shares', user_added_shares)
+
+
+    def add_or_update_managedshare(self, title, url, hide, auto_connect, username=''):
+        network_share = {'title': title, 'share_url': url}
+        existing_share, index = self.get_managedshare_bykey('title', title)
+        processed_share = self._process_networkshare(network_share, hide=hide,
+                                                    auto_connect=auto_connect,
+                                                    share_type='managed')
+        managed_shares = get_managed_shares()
+        if existing_share:
+            managed_shares[index] = processed_share
+        else:
+            managed_shares.append(processed_share)
+        write_pref('user_added_shares', user_added_shares)
+
+
+    def update_share(self, modified_share, index):
+        if modified_share.get('share_type') in ['managed', 'smb_home']:
+            managed_shares = get_managed_shares()
+            managed_shares[index] = modified_share
+            write_pref('managed_shares', managed_shares)
+        if modified_share.get('share_type') == 'user_added_share':
+            user_added_shares = get_user_added_shares()
+            user_added_shares[index] = modified_share
+            write_pref('user_added_shares', user_added_shares)
 
 
 # borrowed from Imagr and modified for this app
 class CustomThread(threading.Thread):
     '''Class for running a process in its own thread'''
 
-    def __init__(self, url=None, unmount=None, mountpoint=None, display_notifications=True):
+    def __init__(self, url=None, unmount=None, mountpoint=None):
         threading.Thread.__init__(self)
         if url:
             self.url = url.replace(' ', '%20')
         else:
             self.url = url
         self.unmount = unmount
-        self.display_notifications = display_notifications
+
 
     def run(self):
         try:
@@ -449,15 +471,13 @@ class CustomThread(threading.Thread):
                 mount_location = mount_shares_better.mount_share(self.url, show_ui=True)
                 message = 'Successfully mounted {0}'.format(self.url)
                 NSLog(message)
-                if self.display_notifications:
-                    notify(message, mount_location)
+                notify(message, mount_location)
             elif self.unmount:
                 NSLog('Attempting to unmount {0}'.format(self.unmount))
                 _unmount_share_cmd(self.unmount)
                 message = 'Successfully unmounted {0}'.format(self.unmount)
                 NSLog(message)
-                if self.display_notifications:
-                    notify('Network share no longer available', message)
+                notify('Network share no longer available', message)
         except Exception as e:
 
             if self.url:

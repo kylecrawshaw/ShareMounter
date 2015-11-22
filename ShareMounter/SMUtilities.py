@@ -20,14 +20,6 @@ user_preferences_path = os.path.join(homedir, 'Library/Preferences/ShareMounter.
 global_preferences_path = '/Library/Preferences/ShareMounter.plist'
 kCFPreferencesCurrentApplication = 'com.github.kylecrawshaw.sharemounter'
 
-class AppleScript(object):
-
-    def __init__(self, osa_script):
-        self.script = NSAppleScript.alloc().initWithSource_(osa_script)
-
-    def runScript(self):
-        self.script.executeAndReturnError_(None)
-
 
 def is_ldap_reachable(domain):
     '''Checks whether or not the ldap server can be reached. Returns True.'''
@@ -297,7 +289,7 @@ class ConfigManager(object):
 
 
     def remove_share(self, network_share):
-        current_share = self.get_share_bykey('title', network_share.get('title'))
+        current_share = self.get_sharebykey('title', network_share.get('title'))
         user_added_shares = get_user_added_shares()
         managed_shares = get_managed_shares()
         if current_share:
@@ -305,7 +297,7 @@ class ConfigManager(object):
                 managed_shares.remove(current_share)
                 write_pref('managed_shares', managed_shares)
             else:
-                user_added_shares.remove(user_share)
+                user_added_shares.remove(current_share)
                 write_pref('user_added_shares', user_added_shares)
 
 
@@ -334,25 +326,16 @@ class ConfigManager(object):
 
 
     def get_mappedshares(self, membership):
-        server_url = read_pref('server_url')
-        if server_url:
-            NSLog('Requesting network shares from {0}'.format(server_url))
-            try:
-                r = requests.get(server_url, params={'membership': membership})
-                mapped_shares = r.json()['managed_shares']
-                NSLog('Successfully retrieved network shares from server.')
-            except requests.exceptions.ConnectionError:
-                return None
-        else:
-            NSLog('Attempting to load preferences from plist')
-            if read_pref('network_shares'):
-                mapped_shares = [network_share
-                                 for network_share in read_pref('network_shares')
-                                 for group in membership
-                                 if group in network_share['groups']]
-            else:
-                mapped_shares = list()
+        NSLog('Looking for network_shares preference...')
+        if read_pref('network_shares'):
+            mapped_shares = [network_share
+                             for network_share in read_pref('network_shares')
+                             for group in membership
+                             if group in network_share['groups']]
             NSLog('Loaded mapped shares!')
+        else:
+            mapped_shares = list()
+            NSLog('Unable to load mapped shares!')
         return mapped_shares
 
 

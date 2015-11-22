@@ -345,10 +345,13 @@ class ConfigManager(object):
                 return None
         else:
             NSLog('Attempting to load preferences from plist')
-            mapped_shares = [network_share
-                             for network_share in read_pref('network_shares')
-                             for group in membership
-                             if group in network_share['groups']]
+            if read_pref('network_shares'):
+                mapped_shares = [network_share
+                                 for network_share in read_pref('network_shares')
+                                 for group in membership
+                                 if group in network_share['groups']]
+            else:
+                mapped_shares = list()
             NSLog('Loaded mapped shares!')
         return mapped_shares
 

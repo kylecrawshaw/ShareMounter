@@ -200,12 +200,12 @@ class StatusBarController(NSObject):
                     share_menu.setHidden_(True)
         if self.ldap_reachable:
             hide_all = False
-            cannot_locate = self.connectMenu.itemWithTitle_('Cannot locate servers')
+            cannot_locate = self.connectMenu.itemWithTitle_('Cannot locate domain')
             if cannot_locate:
                 cannot_locate.setHidden_(True)
         else:
             NSLog('Could not locate servers added to menu')
-            self.connectMenu.addItemWithTitle_action_keyEquivalent_('Cannot locate servers', None, '')
+            self.connectMenu.addItemWithTitle_action_keyEquivalent_('Cannot locate domain', None, '')
             hide_all = True
 
 
@@ -289,9 +289,18 @@ class StatusBarController(NSObject):
 
     @objc.IBAction
     def connectToShare_(self, sender):
-        NSLog('User clicked {}'.format(sender.parentItem().title()))
-        network_share = self.config_manager.get_sharebykey('title', sender.parentItem().title())
-        SMUtilities.mount_share(network_share.get('share_url'))
+        NSLog('User clicked {}'.format(sender.title()))
+        try:
+            share_title = sender.parentItem().title()
+        except AttributeError:
+            share_title = self.shareTitleField.stringValue()
+        network_share = self.config_manager.get_sharebykey('title', share_title)
+        if network_share.get('mount_point') in SMUtilities.get_mounted_network_volumes():
+            d = PyDialog.AlertDialog('Cannot mount "{0}"'.format(network_share.get('title')),
+                                     'Volume is already mounted at "{0}"'.format(network_share.get('mount_point')))
+            d.display()
+        else:
+            SMUtilities.mount_share(network_share.get('share_url'))
 
 
     def getAvailableShares(self):
@@ -432,14 +441,15 @@ class StatusBarController(NSObject):
         available_shares = self.getAvailableShares()
         if available_shares:
             network_share_titles = [share.get('title') for share in available_shares]
+            if refresh_shares:
+                self.networkSharesDropdown.removeAllItems()
+                self.networkSharesDropdown.addItemsWithTitles_(network_share_titles)
 
             if self.shareTitleField.stringValue() not in network_share_titles:
                 refresh_shares=True
             selected_share_title = self.networkSharesDropdown.titleOfSelectedItem()
 
-            if refresh_shares:
-                self.networkSharesDropdown.removeAllItems()
-                self.networkSharesDropdown.addItemsWithTitles_(network_share_titles)
+
             selected_share = self.config_manager.get_sharebykey('title', selected_share_title)
             self.shareURLField.setStringValue_(selected_share.get('share_url'))
             self.shareTitleField.setStringValue_(selected_share.get('title'))
